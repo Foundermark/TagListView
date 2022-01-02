@@ -205,6 +205,12 @@ open class TagListView: UIView {
         }
     }
     
+    open dynamic var maxLines: Int? {
+        didSet {
+            rearrangeViews()
+        }
+    }
+    
     @IBOutlet open weak var delegate: TagListViewDelegate?
     
     open private(set) var tagViews: [TagView] = []
@@ -270,12 +276,28 @@ open class TagListView: UIView {
             ? CGAffineTransform(scaleX: -1.0, y: 1.0)
             : CGAffineTransform.identity
         
+        defer {
+            rows = currentRow
+
+            invalidateIntrinsicContentSize()
+        }
+        
         for (index, tagView) in tagViews.enumerated() {
             tagView.frame.size = tagView.intrinsicContentSize
             tagViewHeight = tagView.frame.height
+            if let max = maxLines, currentRow > max {
+                //already hit max lines bail out and hide view
+                tagView.isHidden = true
+                break
+            }
+            tagView.isHidden = false
             
             if currentRowTagCount == 0 || currentRowWidth + tagView.frame.width > frameWidth {
                 currentRow += 1
+                if let max = maxLines, currentRow > max {
+                    //hit max lines don't create new row
+                    break
+                }
                 currentRowWidth = 0
                 currentRowTagCount = 0
                 currentRowView = UIView()
@@ -319,9 +341,7 @@ open class TagListView: UIView {
             currentRowView.frame.size.width = currentRowWidth
             currentRowView.frame.size.height = max(tagViewHeight, currentRowView.frame.height)
         }
-        rows = currentRow
         
-        invalidateIntrinsicContentSize()
     }
     
     // MARK: - Manage tags
